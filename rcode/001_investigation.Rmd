@@ -1,0 +1,94 @@
+---
+title: "001_investigation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+```{r}
+# install.packages("subspace")
+library(subspace)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(magrittr)
+```
+
+# Investigate 'subspace' Package
+## Example dataset provided
+```{r}
+data("subspace_dataset")
+
+df <- subspace_dataset %>% tbl_df()
+df %>%
+  cor()
+
+# Perform clustering with the subspace package
+# subspace::
+# Output is given as a list(list()): 
+# cl_algorithm[[cluster_num]][[1]] = subspace. The dimensions relevant to the cluster
+# cl_algorithm[[cluster_num]][[2]] = objects. The rows that belong to that cluster
+
+cl_clique <- CLIQUE(df)
+cl_p3c <- P3C(df)
+cl_fires <- FIRES(df)
+cl_proclus <- ProClus(df)
+cl_subclu <- SubClu(df)
+```
+
+```{r}
+# Create a function to obtain the results from the subspace cluster
+# package.
+summarise_cluster_dataset<- function(theclusterobject, thealgorithm) {
+  cluster_ind <- 1
+  temp <- df
+  temp[,-c(theclusterobject[[cluster]][[1]])] <- NA
+  temp %<>% 
+    mutate(baseindex = row_number())
+  base_output <- temp[theclusterobject[[cluster_ind]][[2]],] %>% 
+    mutate(cluster = cluster_ind,
+               algorithm = thealgorithm)
+  
+  for (cluster_ind in 2:length(theclusterobject)) {
+    temp <- df
+    temp[,-c(theclusterobject[[cluster]][[1]])] <- NA
+    temp %<>% 
+      mutate(baseindex = row_number())
+    base_output <- base_output %>% rbind(
+      temp[theclusterobject[[cluster_ind]][[2]],] %>% 
+        mutate(cluster = cluster_ind,
+               algorithm = thealgorithm)
+    )
+  }
+  return(base_output)
+}
+
+# create a base dataset with all clusters row binded, with a baseindex
+# variable to compare raw row values.
+algorithms <- c("CLIQUE", "P3C", "FIRES", "ProClus", "SubClu")
+cluster_objects <- list(cl_clique, cl_p3c, cl_fires, cl_proclus, cl_subclu)
+cluster.df <- summarise_cluster_dataset(cluster_objects[[1]], algorithms[1])
+
+for (i in 2:length(cluster_objects)) {
+  cluster.df <- rbind(cluster.df,
+                      summarise_cluster_dataset(cluster_objects[[i]], algorithms[i]))
+}
+```
+
+```{r}
+# Interactive plots
+# plot(x = cl_clique, data = df)
+
+```
+
+## External High Dimensional Dataset
+```{r}
+sponge.df <- read.table("C:\\Users\\Jacob\\Dropbox\\_Semester 1 2018\\MXB381\\Datasets\\spongedata.txt", sep = ",") %>%
+  tbl_df()
+
+sponge.df
+```
+
